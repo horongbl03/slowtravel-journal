@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Home, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
+import { Home, ArrowLeft, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -225,12 +225,6 @@ const SessionDetailPage = () => {
               <p className="text-sm text-gray-500 mt-1">{sessionData.createdAt}</p>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={() => router.push(`/archive/${params.sessionId}/edit`)}
-                className="p-1.5 text-gray-400 hover:text-blue-500 transition-colors"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
               <button
                 onClick={handleDeleteSession}
                 className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"

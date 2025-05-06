@@ -66,9 +66,13 @@ ${journey.after}
   }
 }
 
-export async function saveEmotionReportToDB(userId: string, reportData: EmotionReport): Promise<void> {
+export async function saveEmotionReportToDB(userId: string, sessionId: string, reportData: EmotionReport): Promise<void> {
   try {
-    console.log('Saving emotion report for user:', userId);
+    if (!sessionId) {
+      console.error('sessionId가 없습니다. 감정 리포트 저장 불가');
+      throw new Error('sessionId가 없습니다. 감정 리포트 저장 불가');
+    }
+    console.log('Saving emotion report for user:', userId, 'session:', sessionId);
     console.log('Report data:', reportData);
 
     // 1. Supabase 연결 상태 확인
@@ -77,84 +81,66 @@ export async function saveEmotionReportToDB(userId: string, reportData: EmotionR
       console.error('Session error:', sessionError);
       throw new Error('인증 세션을 가져오는데 실패했습니다.');
     }
-
     if (!session) {
       console.error('No active session found');
       throw new Error('로그인이 필요합니다.');
     }
 
-    // 2. 테이블이 존재하는지 확인
-    const { data: tableExists, error: tableCheckError } = await supabase
+    // 2. update 시도
+    const { data: updateData, error: updateError } = await supabase
       .from('emotion_reports')
-      .select('id')
-      .limit(1);
-
-    if (tableCheckError) {
-      console.error('Error checking table existence:', tableCheckError);
-      console.log('Table check error details:', {
-        code: tableCheckError.code,
-        message: tableCheckError.message,
-        details: tableCheckError.details,
-        hint: tableCheckError.hint
-      });
-      
-      // 테이블이 없는 경우, 임시로 로컬 스토리지에 저장
-      const reports = JSON.parse(localStorage.getItem('emotion_reports') || '[]');
-      reports.push({
+      .update({
         user_id: userId,
         report_json: reportData,
-        created_at: new Date().toISOString()
+        updated_at: new Date().toISOString()
+      })
+      .eq('session_id', sessionId)
+      .select();
+
+    if (updateError) {
+      console.error('Supabase updateError:', updateError, {
+        code: updateError.code,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint
       });
-      localStorage.setItem('emotion_reports', JSON.stringify(reports));
-      console.log('Saved report to localStorage temporarily');
-      return;
+      throw updateError;
     }
 
-    // 3. 리포트 저장
-    const { data, error } = await supabase
-      .from('emotion_reports')
-      .insert([
-        {
+    if (!updateData || updateData.length === 0) {
+      // update된 row가 없으면 insert 시도
+      const { error: insertError } = await supabase
+        .from('emotion_reports')
+        .insert([{
           user_id: userId,
+          session_id: sessionId,
           report_json: reportData,
           created_at: new Date().toISOString()
-        }
-      ])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Supabase error details:', error);
-      console.log('Insert error details:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        status: error.status,
-        statusText: error.statusText
-      });
-      
-      // 에러가 발생한 경우에도 임시로 로컬 스토리지에 저장
-      const reports = JSON.parse(localStorage.getItem('emotion_reports') || '[]');
-      reports.push({
-        user_id: userId,
-        report_json: reportData,
-        created_at: new Date().toISOString()
-      });
-      localStorage.setItem('emotion_reports', JSON.stringify(reports));
-      console.log('Saved report to localStorage due to Supabase error');
-      return;
+        }]);
+      if (insertError) {
+        console.error('Supabase insertError:', insertError, {
+          code: insertError.code,
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint
+        });
+        throw insertError;
+      }
+      console.log('Successfully inserted emotion report for session:', sessionId);
+    } else {
+      console.log('Successfully updated emotion report for session:', sessionId);
     }
-
-    console.log('Successfully saved emotion report:', data);
   } catch (error) {
-    console.error('Error saving emotion report:', error);
-    console.log('Unexpected error details:', error);
-    
+    console.error('Error saving emotion report:', error, {
+      userId,
+      sessionId,
+      reportData
+    });
     // 예상치 못한 에러가 발생한 경우에도 임시로 로컬 스토리지에 저장
     const reports = JSON.parse(localStorage.getItem('emotion_reports') || '[]');
     reports.push({
       user_id: userId,
+      session_id: sessionId,
       report_json: reportData,
       created_at: new Date().toISOString()
     });

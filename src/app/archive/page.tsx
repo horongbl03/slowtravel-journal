@@ -239,9 +239,6 @@ const ArchivePage = () => {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                        {session.status === 'completed' ? '완료' : '진행중'}
-                      </span>
                       {!isSelectionMode && (
                         <Link
                           href={`/archive/${session.id}`}

@@ -77,50 +77,83 @@ const PreJourneyPage = () => {
         return;
       }
 
-      // 1. journey_sessions 테이블에 세션 생성
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('journey_sessions')
-        .insert([
-          {
-            user_id: user.id,
-            status: 'in_progress'
-          }
-        ])
-        .select()
+      // 1. 세션이 이미 있으면 새로 만들지 않음
+      let sessionId = localStorage.getItem('currentSessionId') as string;
+      if (!sessionId) {
+        const { data: sessionData, error: sessionError } = await supabase
+          .from('journey_sessions')
+          .insert([
+            {
+              user_id: user.id,
+              status: 'in_progress'
+            }
+          ])
+          .select()
+          .single();
+
+        if (sessionError) {
+          console.error('Error creating session:', sessionError);
+          throw new Error(`세션 생성 중 오류: ${sessionError.message}`);
+        }
+
+        if (!sessionData?.id) {
+          throw new Error('세션 ID가 생성되지 않았습니다.');
+        }
+        sessionId = sessionData.id;
+        localStorage.setItem('currentSessionId', sessionId);
+      }
+      // sessionId는 이제 string임이 보장됨
+      // 2. pre_journey_records에 이미 session_id가 있는지 확인
+      const { data: existing, error: fetchError } = await supabase
+        .from('pre_journey_records')
+        .select('id')
+        .eq('session_id', sessionId)
         .single();
 
-      if (sessionError) {
-        console.error('Error creating session:', sessionError);
-        throw new Error(`세션 생성 중 오류: ${sessionError.message}`);
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        // PGRST116: No rows found (즉, 없는 건 정상)
+        throw fetchError;
       }
 
-      if (!sessionData?.id) {
-        throw new Error('세션 ID가 생성되지 않았습니다.');
-      }
-
-      // 2. sessionId를 localStorage에 저장
-      localStorage.setItem('currentSessionId', sessionData.id);
-
-      // 3. pre_journey_records 테이블에 데이터 저장
-      const { error: preJourneyError } = await supabase
-        .from('pre_journey_records')
-        .insert([
-          {
-            session_id: sessionData.id,
+      if (existing) {
+        // 이미 있으면 update
+        const { error: updateError } = await supabase
+          .from('pre_journey_records')
+          .update({
             physical_condition: physicalCondition,
             current_mood: currentMood,
             mood_details: moodDetails,
             resolutions: resolutions,
             desires: desires
-          }
-        ]);
+          })
+          .eq('session_id', sessionId);
 
-      if (preJourneyError) {
-        console.error('Error saving pre-journey data:', preJourneyError);
-        throw new Error(`여행 전 기록 저장 중 오류: ${preJourneyError.message}`);
+        if (updateError) {
+          console.error('Error updating pre-journey data:', updateError);
+          throw new Error(`여행 전 기록 수정 중 오류: ${updateError.message}`);
+        }
+      } else {
+        // 없으면 insert
+        const { error: preJourneyError } = await supabase
+          .from('pre_journey_records')
+          .insert([
+            {
+              session_id: sessionId,
+              physical_condition: physicalCondition,
+              current_mood: currentMood,
+              mood_details: moodDetails,
+              resolutions: resolutions,
+              desires: desires
+            }
+          ]);
+
+        if (preJourneyError) {
+          console.error('Error saving pre-journey data:', preJourneyError);
+          throw new Error(`여행 전 기록 저장 중 오류: ${preJourneyError.message}`);
+        }
       }
 
-      // 4. during-journey 페이지로 이동
+      // 3. during-journey 페이지로 이동
       router.push('/during-journey');
     } catch (error) {
       console.error('Error in handleNext:', error);

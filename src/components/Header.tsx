@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { Home } from 'lucide-react';
 
 interface WeatherData {
@@ -22,14 +22,40 @@ const Header = () => {
   useEffect(() => {
     const fetchWeather = async () => {
       try {
-        const response = await axios.get(
-          `https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid=${process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY}&units=metric`
-        );
+        // 임시로 API 키를 직접 설정
+        const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
+        if (!apiKey) {
+          throw new Error('OpenWeather API key is not configured');
+        }
+        console.log('API Key length:', apiKey.length);
+        console.log('API Key first/last chars:', apiKey.charAt(0), apiKey.charAt(apiKey.length - 1));
+
+        const url = `https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid=${apiKey}&units=metric`;
+        console.log('Making request to:', url.replace(apiKey, '***'));
+
+        const response = await axios.get(url);
+        console.log('Weather API response:', response.data);
+        
+        if (!response.data) {
+          throw new Error('No data received from weather API');
+        }
+
         setWeather(response.data);
         setError(null);
       } catch (err) {
-        setError('날씨 정보를 불러오는데 실패했습니다.');
         console.error('Weather fetch error:', err);
+        
+        if (err instanceof Error) {
+          setError(err.message);
+        } else if (axios.isAxiosError(err)) {
+          const status = err.response?.status;
+          const statusText = err.response?.statusText;
+          const data = err.response?.data;
+          console.error('Axios error details:', { status, statusText, data });
+          setError(`날씨 정보를 불러오는데 실패했습니다: ${status} ${statusText}`);
+        } else {
+          setError('날씨 정보를 불러오는데 실패했습니다.');
+        }
       } finally {
         setLoading(false);
       }

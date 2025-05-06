@@ -1,9 +1,4 @@
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true // 브라우저에서 API 호출을 허용
-});
+import axios from 'axios';
 
 interface JourneyData {
   preJourney: {
@@ -30,7 +25,8 @@ interface JourneyData {
 
 export async function generateEmotionReport(data: JourneyData) {
   try {
-    if (!process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
+    const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+    if (!apiKey) {
       throw new Error('OpenAI API 키가 설정되지 않았습니다.');
     }
 
@@ -66,29 +62,44 @@ export async function generateEmotionReport(data: JourneyData) {
 
 응답은 반드시 위 형식의 JSON이어야 하며, 각 필드는 문자열 배열이나 문자열이어야 합니다.`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
-      messages: [
-        {
-          role: "system",
-          content: "당신은 여행자의 감정을 분석하는 전문가입니다. 주어진 여행 기록을 바탕으로 감정 분석 리포트를 작성해주세요."
-        },
-        {
-          role: "user",
-          content: prompt
+    const response = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-4-turbo-preview',
+        messages: [
+          {
+            role: 'system',
+            content: '당신은 여행자의 감정을 분석하는 전문가입니다. 주어진 여행 기록을 바탕으로 감정 분석 리포트를 작성해주세요.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        response_format: { type: 'json_object' }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
         }
-      ],
-      response_format: { type: "json_object" }
-    });
+      }
+    );
 
-    const response = completion.choices[0]?.message?.content;
-    if (!response) {
+    const content = response.data.choices?.[0]?.message?.content;
+    if (!content) {
       throw new Error('AI 응답을 받지 못했습니다.');
     }
-
-    const report = JSON.parse(response);
-    return report;
-  } catch (error) {
+    return JSON.parse(content);
+  } catch (error: any) {
+    if (error.response) {
+      console.error('OpenAI API error response:', error.response.data);
+      throw new Error(error.response.data?.error?.message || 'OpenAI API 호출 실패');
+    }
+    if (error.message) {
+      console.error('OpenAI API error message:', error.message);
+      throw new Error(error.message);
+    }
     console.error('Error generating emotion report:', error);
     throw new Error('AI 감정 분석 리포트 생성에 실패했습니다.');
   }

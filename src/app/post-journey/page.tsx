@@ -99,41 +99,25 @@ const PostJourneyPage = () => {
         return;
       }
 
-      // Create session first
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('journey_sessions')
-        .insert([
-          {
-            user_id: user.id,
-            status: 'completed',
-            completed_at: new Date().toISOString()
-          }
-        ])
-        .select()
-        .single();
-
-      if (sessionError || !sessionData?.id) {
-        throw new Error('세션을 생성할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      // 기존 sessionId를 localStorage에서 가져옴
+      const sessionId = localStorage.getItem('currentSessionId');
+      if (!sessionId) {
+        alert('여행 전 기록이 없습니다. 처음부터 다시 시작해주세요.');
+        router.push('/pre-journey');
+        return;
       }
-
-      const session_id = sessionData.id;
-
-      // Save pre-journey data
-      const { error: preError } = await supabase
-        .from('pre_journey_records')
-        .insert([{ ...preJourneyData, session_id }]);
-
-      if (preError) throw new Error('여행 전 기록 저장에 실패했습니다.');
 
       // Load and validate during-journey data
       const emotions = localStorage.getItem('emotions');
       const emotionsArray = emotions ? emotions.split(',').map(e => e.trim()) : [];
 
       const duringJourneyData = {
-        session_id,
+        session_id: sessionId,
+        user_id: user.id,
         focus_object: localStorage.getItem('focusObject') || '',
         focus_reason: localStorage.getItem('focusReason') || '',
-        emotions: emotionsArray
+        emotions: emotionsArray,
+        exploration: localStorage.getItem('exploration') || ''
       };
 
       console.log('During journey data to be saved:', duringJourneyData);
@@ -147,21 +131,50 @@ const PostJourneyPage = () => {
         throw new Error('여행 중 기록이 누락되었습니다. 처음부터 다시 시작해주세요.');
       }
 
-      const { data: duringJourneyResult, error: duringJourneyError } = await supabase
+      // during_journey_records upsert 로직
+      // 이미 session_id가 있으면 update, 없으면 insert
+      const { data: existingDuring, error: fetchDuringError } = await supabase
         .from('during_journey_records')
-        .insert([duringJourneyData])
-        .select();
-
+        .select('id')
+        .eq('session_id', sessionId)
+        .single();
+      if (fetchDuringError && fetchDuringError.code !== 'PGRST116') {
+        throw fetchDuringError;
+      }
+      let duringJourneyResult, duringJourneyError;
+      if (existingDuring) {
+        // update
+        const { error } = await supabase
+          .from('during_journey_records')
+          .update({
+            user_id: user.id,
+            focus_object: duringJourneyData.focus_object,
+            focus_reason: duringJourneyData.focus_reason,
+            emotions: duringJourneyData.emotions,
+            exploration: duringJourneyData.exploration
+          })
+          .eq('session_id', sessionId);
+        duringJourneyError = error;
+      } else {
+        // insert
+        const { data, error } = await supabase
+          .from('during_journey_records')
+          .insert([duringJourneyData])
+          .select();
+        duringJourneyResult = data;
+        duringJourneyError = error;
+      }
       if (duringJourneyError) {
         console.error('During journey error details:', duringJourneyError);
+        alert('여행 중 기록 저장에 실패했습니다. 관리자에게 문의해 주세요.');
         throw new Error(`During journey save failed: ${JSON.stringify(duringJourneyError)}`);
       }
-
       console.log('Supabase during journey response:', duringJourneyResult);
 
       // Prepare post journey data
       const postJourneyPayload = {
-        session_id,
+        session_id: sessionId,
+        user_id: user.id,
         state_comparison: `출발 전: ${beforeState}\n여행 중: ${duringState}\n돌아온 지금: ${afterState}`,
         longest_emotion: longestEmotion,
         longest_place: longestPlace,
@@ -170,22 +183,44 @@ const PostJourneyPage = () => {
 
       console.log('Attempting to save post journey data:', postJourneyPayload);
 
-      // Save post-journey data
-      const postJourneyResponse = await supabase
+      // post_journey_records upsert 로직
+      // 이미 session_id가 있으면 update, 없으면 insert
+      const { data: existingPost, error: fetchPostError } = await supabase
         .from('post_journey_records')
-        .insert([postJourneyPayload])
-        .select();
-
-      console.log('Post journey complete response:', postJourneyResponse);
-
-      if (postJourneyResponse.error) {
-        console.error('Post journey save failed:', {
-          error: postJourneyResponse.error,
-          details: postJourneyResponse.error.details,
-          message: postJourneyResponse.error.message
-        });
-        throw new Error(`여행 후 기록 저장에 실패했습니다: ${postJourneyResponse.error.message}`);
+        .select('id')
+        .eq('session_id', sessionId)
+        .single();
+      if (fetchPostError && fetchPostError.code !== 'PGRST116') {
+        throw fetchPostError;
       }
+      let postJourneyResult, postJourneyError;
+      if (existingPost) {
+        // update
+        const { error } = await supabase
+          .from('post_journey_records')
+          .update({
+            user_id: user.id,
+            state_comparison: postJourneyPayload.state_comparison,
+            longest_emotion: postJourneyPayload.longest_emotion,
+            longest_place: postJourneyPayload.longest_place,
+            journey_message: postJourneyPayload.journey_message
+          })
+          .eq('session_id', sessionId);
+        postJourneyError = error;
+      } else {
+        // insert
+        const { data, error } = await supabase
+          .from('post_journey_records')
+          .insert([postJourneyPayload])
+          .select();
+        postJourneyResult = data;
+        postJourneyError = error;
+      }
+      if (postJourneyError) {
+        console.error('Post journey save failed:', postJourneyError);
+        throw new Error(`여행 후 기록 저장에 실패했습니다: ${postJourneyError.message}`);
+      }
+      console.log('Post journey complete response:', postJourneyResult);
 
       // Prepare emotion report data
       try {
@@ -200,7 +235,7 @@ const PostJourneyPage = () => {
             focusObject: duringJourneyData.focus_object,
             focusReason: duringJourneyData.focus_reason,
             emotions: duringJourneyData.emotions,
-            exploration: localStorage.getItem('exploration') || ''
+            exploration: duringJourneyData.exploration
           },
           postJourney: {
             beforeState: beforeState,
@@ -213,7 +248,8 @@ const PostJourneyPage = () => {
         });
 
         const emotionReportPayload = {
-          session_id,
+          user_id: user.id,
+          session_id: sessionId,
           emotion_flow: aiReport.emotion_flow,
           recurring_themes: aiReport.recurring_themes,
           sensory_elements: aiReport.sensory_elements,
@@ -256,7 +292,7 @@ const PostJourneyPage = () => {
       console.log('Successfully cleared localStorage');
 
       // Navigate to emotion report page
-      router.push('/emotion-report');
+      router.push(`/emotion-report/${sessionId}`);
 
     } catch (error) {
       console.error('Error in handleComplete:', error);
