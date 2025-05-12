@@ -12,6 +12,8 @@ interface JourneyData {
     focusReason: string;
     emotions: string[];
     exploration: string;
+    bodyConditionAfter?: string;
+    bestSensation?: string;
   };
   postJourney: {
     beforeState: string;
@@ -25,11 +27,9 @@ interface JourneyData {
 
 export async function generateEmotionReport(data: JourneyData) {
   try {
-    const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OpenAI API 키가 설정되지 않았습니다.');
-    }
-
+    // Gemini API Key (운영/배포 환경에서는 반드시 환경변수로 관리)
+    const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    if (!GEMINI_API_KEY) throw new Error('Gemini API 키가 설정되지 않았습니다.');
     const prompt = `
 당신은 여행자의 감정을 분석하는 전문가입니다. 다음 여행 기록을 바탕으로 감정 분석 리포트를 작성해주세요.
 
@@ -43,6 +43,8 @@ export async function generateEmotionReport(data: JourneyData) {
 - 주목한 대상: ${data.duringJourney.focusObject}
 - 주목한 이유: ${data.duringJourney.focusReason}
 - 감정: ${data.duringJourney.emotions.join(', ')}
+- 감상 직후 내 몸 상태: ${data.duringJourney.bodyConditionAfter || ''}
+- 지금 가장 좋은 감각: ${data.duringJourney.bestSensation || ''}
 
 [여행 후 기록]
 - 출발 전: ${data.postJourney.beforeState}
@@ -63,44 +65,38 @@ export async function generateEmotionReport(data: JourneyData) {
 응답은 반드시 위 형식의 JSON이어야 하며, 각 필드는 문자열 배열이나 문자열이어야 합니다.`;
 
     const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
       {
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content: '당신은 여행자의 감정을 분석하는 전문가입니다. 주어진 여행 기록을 바탕으로 감정 분석 리포트를 작성해주세요.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        response_format: { type: 'json_object' }
+        contents: [
+        {
+          role: "user",
+            parts: [
+              { text: prompt }
+            ]
+        }
+        ]
       },
       {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Content-Type': 'application/json'
         }
       }
     );
 
-    const content = response.data.choices?.[0]?.message?.content;
-    if (!content) {
-      throw new Error('AI 응답을 받지 못했습니다.');
-    }
+    // Gemini 응답 파싱
+    const content = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!content) throw new Error('Gemini 응답이 비어있습니다.');
     return JSON.parse(content);
   } catch (error: any) {
     if (error.response) {
-      console.error('OpenAI API error response:', error.response.data);
-      throw new Error(error.response.data?.error?.message || 'OpenAI API 호출 실패');
+      console.error('Gemini API error response:', error.response.data);
+      throw new Error(error.response.data?.error?.message || 'Gemini API 호출 실패');
     }
     if (error.message) {
-      console.error('OpenAI API error message:', error.message);
+      console.error('Gemini API error message:', error.message);
       throw new Error(error.message);
     }
     console.error('Error generating emotion report:', error);
-    throw new Error('AI 감정 분석 리포트 생성에 실패했습니다.');
+    throw new Error('Gemini 감정 분석 리포트 생성에 실패했습니다.');
   }
 } 

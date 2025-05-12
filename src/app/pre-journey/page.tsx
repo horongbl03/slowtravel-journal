@@ -77,6 +77,14 @@ const PreJourneyPage = () => {
         return;
       }
 
+      // 새로운 기록 시작 시 during/post-journey 관련 localStorage 초기화
+      const duringAndPostKeys = [
+        'focusObject', 'focusReason', 'emotions', 'exploration', 'currentState',
+        'bestSensation', 'bodyConditionAfter', 'imagery', 'restMoments', 'notableSensations',
+        'beforeState', 'duringState', 'afterState', 'longestPlace', 'longestEmotion', 'journeyMessage'
+      ];
+      duringAndPostKeys.forEach(key => localStorage.removeItem(key));
+
       // 1. 세션이 이미 있으면 새로 만들지 않음
       let sessionId = localStorage.getItem('currentSessionId') as string;
       if (!sessionId) {

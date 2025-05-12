@@ -110,7 +110,7 @@ export async function saveEmotionReportToDB(userId: string, sessionId: string, r
     if (!updateData || updateData.length === 0) {
       // update된 row가 없으면 insert 시도
       const { error: insertError } = await supabase
-        .from('emotion_reports')
+      .from('emotion_reports')
         .insert([{
           user_id: userId,
           session_id: sessionId,

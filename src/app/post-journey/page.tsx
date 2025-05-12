@@ -117,7 +117,9 @@ const PostJourneyPage = () => {
         focus_object: localStorage.getItem('focusObject') || '',
         focus_reason: localStorage.getItem('focusReason') || '',
         emotions: emotionsArray,
-        exploration: localStorage.getItem('exploration') || ''
+        exploration: localStorage.getItem('exploration') || '',
+        body_condition_after: localStorage.getItem('bodyConditionAfter') || '',
+        best_sensation: localStorage.getItem('bestSensation') || ''
       };
 
       console.log('During journey data to be saved:', duringJourneyData);
@@ -151,16 +153,18 @@ const PostJourneyPage = () => {
             focus_object: duringJourneyData.focus_object,
             focus_reason: duringJourneyData.focus_reason,
             emotions: duringJourneyData.emotions,
-            exploration: duringJourneyData.exploration
+            exploration: duringJourneyData.exploration,
+            body_condition_after: duringJourneyData.body_condition_after,
+            best_sensation: duringJourneyData.best_sensation
           })
           .eq('session_id', sessionId);
         duringJourneyError = error;
       } else {
         // insert
         const { data, error } = await supabase
-          .from('during_journey_records')
-          .insert([duringJourneyData])
-          .select();
+        .from('during_journey_records')
+        .insert([duringJourneyData])
+        .select();
         duringJourneyResult = data;
         duringJourneyError = error;
       }
@@ -219,66 +223,8 @@ const PostJourneyPage = () => {
       if (postJourneyError) {
         console.error('Post journey save failed:', postJourneyError);
         throw new Error(`여행 후 기록 저장에 실패했습니다: ${postJourneyError.message}`);
-      }
-      console.log('Post journey complete response:', postJourneyResult);
-
-      // Prepare emotion report data
-      try {
-        const aiReport = await generateEmotionReport({
-          preJourney: {
-            physicalCondition: preJourneyData.physical_condition,
-            currentMood: preJourneyData.current_mood,
-            moodDetails: preJourneyData.mood_details,
-            desires: preJourneyData.desires
-          },
-          duringJourney: {
-            focusObject: duringJourneyData.focus_object,
-            focusReason: duringJourneyData.focus_reason,
-            emotions: duringJourneyData.emotions,
-            exploration: duringJourneyData.exploration
-          },
-          postJourney: {
-            beforeState: beforeState,
-            duringState: duringState,
-            afterState: afterState,
-            longestPlace: longestPlace,
-            longestEmotion: longestEmotion,
-            journeyMessage: journeyMessage
-          }
-        });
-
-        const emotionReportPayload = {
-          user_id: user.id,
-          session_id: sessionId,
-          emotion_flow: aiReport.emotion_flow,
-          recurring_themes: aiReport.recurring_themes,
-          sensory_elements: aiReport.sensory_elements,
-          ai_feedback: aiReport.ai_feedback,
-          is_latest: true
-        };
-
-        console.log('Attempting to save emotion report:', emotionReportPayload);
-
-        // Save emotion report
-        const emotionReportResponse = await supabase
-          .from('emotion_reports')
-          .insert([emotionReportPayload])
-          .select();
-
-        console.log('Emotion report complete response:', emotionReportResponse);
-
-        if (emotionReportResponse.error) {
-          console.error('Emotion report save failed:', {
-            error: emotionReportResponse.error,
-            details: emotionReportResponse.error.details,
-            message: emotionReportResponse.error.message
-          });
-          throw new Error(`감정 보고서 저장에 실패했습니다: ${emotionReportResponse.error.message}`);
         }
-      } catch (error) {
-        console.error('Error generating/saving emotion report:', error);
-        throw new Error('AI 감정 분석 리포트 생성에 실패했습니다.');
-      }
+      console.log('Post journey complete response:', postJourneyResult);
 
       // All operations succeeded, clear localStorage
       const keysToRemove = [
@@ -291,8 +237,8 @@ const PostJourneyPage = () => {
       keysToRemove.forEach(key => localStorage.removeItem(key));
       console.log('Successfully cleared localStorage');
 
-      // Navigate to emotion report page
-      router.push(`/emotion-report/${sessionId}`);
+      // 바로 아카이브 상세로 이동 (감정 리포트 생성 X)
+      router.push(`/archive/${sessionId}`);
 
     } catch (error) {
       console.error('Error in handleComplete:', error);

@@ -185,7 +185,7 @@ export default function EmotionReportPage() {
           {/* 홈으로 돌아가기 버튼 */}
           <button
             onClick={() => router.push('/archive')}
-            className="w-full px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 mt-8"
+            className="w-full px-6 py-3 bg-[#2C2C2C] text-white rounded-xl hover:bg-[#3C3C3C] mt-8"
           >
             내 기록 보기
           </button>

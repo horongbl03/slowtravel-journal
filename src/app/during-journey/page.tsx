@@ -18,6 +18,7 @@ const DuringJourneyPage = () => {
   const [imagery, setImagery] = useState('');
   const [restMoments, setRestMoments] = useState('');
   const [notableSensations, setNotableSensations] = useState('');
+  const [bodyConditionAfter, setBodyConditionAfter] = useState('');
 
   // 페이지 로드 시 localStorage에서 데이터 불러오기
   useEffect(() => {
@@ -30,6 +31,7 @@ const DuringJourneyPage = () => {
     const savedImagery = localStorage.getItem('imagery');
     const savedRestMoments = localStorage.getItem('restMoments');
     const savedNotableSensations = localStorage.getItem('notableSensations');
+    const savedBodyConditionAfter = localStorage.getItem('bodyConditionAfter');
 
     if (savedFocusObject) setFocusObject(savedFocusObject);
     if (savedFocusReason) setFocusReason(savedFocusReason);
@@ -40,6 +42,7 @@ const DuringJourneyPage = () => {
     if (savedImagery) setImagery(savedImagery);
     if (savedRestMoments) setRestMoments(savedRestMoments);
     if (savedNotableSensations) setNotableSensations(savedNotableSensations);
+    if (savedBodyConditionAfter) setBodyConditionAfter(savedBodyConditionAfter);
   }, []);
 
   // 데이터 변경 시 자동 저장
@@ -53,7 +56,8 @@ const DuringJourneyPage = () => {
     localStorage.setItem('imagery', imagery);
     localStorage.setItem('restMoments', restMoments);
     localStorage.setItem('notableSensations', notableSensations);
-  }, [focusObject, focusReason, emotions, exploration, currentState, bestSensation, imagery, restMoments, notableSensations]);
+    localStorage.setItem('bodyConditionAfter', bodyConditionAfter);
+  }, [focusObject, focusReason, emotions, exploration, currentState, bestSensation, imagery, restMoments, notableSensations, bodyConditionAfter]);
 
   const handleNext = () => {
     try {
@@ -147,6 +151,34 @@ const DuringJourneyPage = () => {
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-200 focus:border-blue-200 bg-gray-50/50"
               value={exploration}
               onChange={(e) => setExploration(e.target.value)}
+            />
+          </div>
+
+          {/* Body Condition After */}
+          <div className="mb-8">
+            <label className="block text-gray-600 text-sm mb-2">
+              전시 감상 직후 내 몸 상태는 어떤가요?
+            </label>
+            <input
+              type="text"
+              placeholder="예: 다리는 아픈데, 마음은 편해"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-200 focus:border-blue-200 bg-gray-50/50"
+              value={bodyConditionAfter}
+              onChange={(e) => setBodyConditionAfter(e.target.value)}
+            />
+          </div>
+
+          {/* Best Sensation */}
+          <div className="mb-8">
+            <label className="block text-gray-600 text-sm mb-2">
+              지금 가장 좋은 감각은?
+            </label>
+            <input
+              type="text"
+              placeholder="예: 햇살 / 커피 향 / 발바닥에 닿는 잔디"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-200 focus:border-blue-200 bg-gray-50/50"
+              value={bestSensation}
+              onChange={(e) => setBestSensation(e.target.value)}
             />
           </div>
 

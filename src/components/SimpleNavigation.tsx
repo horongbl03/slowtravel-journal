@@ -36,9 +36,9 @@ const SimpleNavigation = () => {
     <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-100">
       <div className="flex items-center justify-between px-4 py-3">
         <Link href="/" className="flex items-center text-gray-500 hover:text-gray-700">
-          <Home className="w-4 h-4 mr-1" />
-          <span className="text-xs">홈으로</span>
-        </Link>
+        <Home className="w-4 h-4 mr-1" />
+        <span className="text-xs">홈으로</span>
+      </Link>
         <div className="flex items-center min-w-[120px] justify-end">
           {loading ? (
             <div className="animate-pulse h-5 w-20 bg-gray-200 rounded" />

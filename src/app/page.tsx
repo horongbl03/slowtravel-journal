@@ -93,15 +93,17 @@ export default function LandingPage() {
                 </button>
               ) : (
                 <div className="space-y-3">
+                  <div className="flex flex-col gap-3 md:flex-row md:gap-4 justify-center">
                   <Link
                     href="/pre-journey"
-                    className="block w-full py-3 px-4 bg-[#2C2C2C] text-white rounded-lg hover:bg-[#3C3C3C] transition-colors text-center"
+                      className="flex-1 py-3 px-4 bg-[#2C2C2C] text-white rounded-lg hover:bg-[#3C3C3C] transition-colors text-center"
                   >
                     여행 시작하기
                   </Link>
+                  </div>
                   <Link
                     href="/archive"
-                    className="block text-center text-gray-500 hover:text-gray-700 transition-colors border border-gray-300 rounded-lg py-2"
+                    className="block text-center text-gray-500 hover:text-gray-700 transition-colors border border-gray-300 rounded-lg py-2 mt-3"
                   >
                     내 기록 보기
                   </Link>

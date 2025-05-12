@@ -102,6 +102,12 @@ const EmotionReportPage = () => {
     fetchDataAndGenerateReport();
   }, [user, router, sessionId]);
 
+  useEffect(() => {
+    if (sessionId) {
+      router.replace(`/emotion-report/${sessionId}`);
+    }
+  }, [router, sessionId]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -154,7 +160,7 @@ const EmotionReportPage = () => {
           <div className="mb-8">
             <h2 className="text-lg font-semibold text-gray-800 mb-3">반복적으로 등장한 주제</h2>
             <div className="flex flex-wrap gap-2">
-              {report?.recurring_themes.map((theme, index) => (
+              {(report?.recurring_themes ?? []).map((theme, index) => (
                 <span
                   key={index}
                   className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
@@ -168,7 +174,7 @@ const EmotionReportPage = () => {
           <div className="mb-8">
             <h2 className="text-lg font-semibold text-gray-800 mb-3">인상 깊었던 공간과 의미</h2>
             <div className="flex flex-wrap gap-2">
-              {report?.sensory_elements.map((element, index) => (
+              {(report?.sensory_elements ?? []).map((element, index) => (
                 <span
                   key={index}
                   className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm"

@@ -17,12 +17,12 @@ export default function DeprecatedEmotionReportPage() {
           감정 리포트는 <span className="font-mono bg-gray-100 px-2 py-1 rounded">/emotion-report/[sessionId]</span> 경로로만 접근할 수 있습니다.<br />
           여행 기록을 완료한 후, 해당 기록의 감정 리포트 버튼을 통해 이동해 주세요.
         </p>
-        <button
+          <button
           onClick={() => window.location.href = '/'}
           className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600"
-        >
-          홈으로 돌아가기
-        </button>
+          >
+            홈으로 돌아가기
+          </button>
       </div>
     </div>
   );
