@@ -20,14 +20,34 @@ interface Stats {
   postRate: number;
 }
 
+interface MonthlyData {
+  month: string;
+  sessions: number;
+  reports: number;
+}
+
+interface ThemePieData {
+  name: string;
+  value: number;
+}
+
+interface UserRow {
+  user_id: string;
+  created_at: string;
+}
+
+interface SessionRow {
+  id: string;
+  created_at: string;
+}
+
 const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
-  const [emotionPie, setEmotionPie] = useState<any[]>([]);
-  const [themePie, setThemePie] = useState<any[]>([]);
+  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
+  const [themePie, setThemePie] = useState<ThemePieData[]>([]);
 
   useEffect(() => {
     async function fetchStats() {
@@ -39,7 +59,7 @@ export default function AdminDashboard() {
       const { data: userRows } = await supabase
         .from("journey_sessions")
         .select("user_id");
-      const userSet = new Set(userRows?.map((row: any) => row.user_id));
+      const userSet = new Set(userRows?.map((row: { user_id: string }) => row.user_id));
       const totalUsers = userSet.size;
       // 감정 리포트 수
       const { count: totalEmotionReports } = await supabase
@@ -54,11 +74,11 @@ export default function AdminDashboard() {
       const { data: userRows7 } = await supabase
         .from("journey_sessions")
         .select("user_id, created_at");
-      const newUsers7 = new Set(userRows7?.filter((row: any) => new Date(row.created_at) >= d7).map((row: any) => row.user_id)).size;
-      const newUsers30 = new Set(userRows7?.filter((row: any) => new Date(row.created_at) >= d30).map((row: any) => row.user_id)).size;
+      const newUsers7 = new Set(userRows7?.filter((row: UserRow) => new Date(row.created_at) >= d7).map((row: UserRow) => row.user_id)).size;
+      const newUsers30 = new Set(userRows7?.filter((row: UserRow) => new Date(row.created_at) >= d30).map((row: UserRow) => row.user_id)).size;
       // 최근 7/30일 활동자 (세션 생성 기준)
-      const activeUsers7 = new Set(userRows7?.filter((row: any) => new Date(row.created_at) >= d7).map((row: any) => row.user_id)).size;
-      const activeUsers30 = new Set(userRows7?.filter((row: any) => new Date(row.created_at) >= d30).map((row: any) => row.user_id)).size;
+      const activeUsers7 = new Set(userRows7?.filter((row: UserRow) => new Date(row.created_at) >= d7).map((row: UserRow) => row.user_id)).size;
+      const activeUsers30 = new Set(userRows7?.filter((row: UserRow) => new Date(row.created_at) >= d30).map((row: UserRow) => row.user_id)).size;
       // 여행 전/중/후 기록 작성률
       const { count: preCount } = await supabase
         .from("pre_journey_records")
@@ -94,12 +114,12 @@ export default function AdminDashboard() {
         .select("id, created_at");
       // 월별 집계
       const monthMap: Record<string, { sessions: number; reports: number }> = {};
-      sessionRows?.forEach((row: any) => {
+      sessionRows?.forEach((row: SessionRow) => {
         const month = row.created_at?.slice(0, 7);
         if (!monthMap[month]) monthMap[month] = { sessions: 0, reports: 0 };
         monthMap[month].sessions++;
       });
-      reportRows?.forEach((row: any) => {
+      reportRows?.forEach((row: SessionRow) => {
         const month = row.created_at?.slice(0, 7);
         if (!monthMap[month]) monthMap[month] = { sessions: 0, reports: 0 };
         monthMap[month].reports++;
@@ -113,33 +133,30 @@ export default function AdminDashboard() {
       const { data: emotionRows } = await supabase
         .from("emotion_reports")
         .select("emotion_flow");
-      const emotionCount: Record<string, number> = { 긍정: 0, 부정: 0, 중립: 0 };
-      emotionRows?.forEach((row: any) => {
-        if (row.emotion_flow) {
-          if (row.emotion_flow.includes("긍정")) emotionCount["긍정"]++;
-          if (row.emotion_flow.includes("부정")) emotionCount["부정"]++;
-          if (row.emotion_flow.includes("중립")) emotionCount["중립"]++;
+      const emotionFlowMap = new Map<string, number>();
+      emotionRows?.forEach((row: { emotion_flow: string }) => {
+        const flow = row.emotion_flow;
+        if (flow) {
+          const count = emotionFlowMap.get(flow) || 0;
+          emotionFlowMap.set(flow, count + 1);
         }
       });
-      setEmotionPie([
-        { name: "긍정", value: emotionCount["긍정"] },
-        { name: "부정", value: emotionCount["부정"] },
-        { name: "중립", value: emotionCount["중립"] },
-      ]);
-      // 테마 분포 (recurring_themes)
-      const { data: themeRows } = await supabase
+
+      const { data: recurringThemesRows } = await supabase
         .from("emotion_reports")
         .select("recurring_themes");
-      const themeCount: Record<string, number> = {};
-      themeRows?.forEach((row: any) => {
-        if (Array.isArray(row.recurring_themes)) {
-          row.recurring_themes.forEach((theme: string) => {
-            themeCount[theme] = (themeCount[theme] || 0) + 1;
+      const recurringThemesMap = new Map<string, number>();
+      recurringThemesRows?.forEach((row: { recurring_themes: string[] }) => {
+        const themes = row.recurring_themes;
+        if (Array.isArray(themes)) {
+          themes.forEach((theme) => {
+            const count = recurringThemesMap.get(theme) || 0;
+            recurringThemesMap.set(theme, count + 1);
           });
         }
       });
       // 상위 6개만 보여주고, 나머지는 '기타'로 묶기
-      const sortedThemes = Object.entries(themeCount).sort((a, b) => b[1] - a[1]);
+      const sortedThemes = Object.entries(recurringThemesMap).sort((a, b) => b[1] - a[1]);
       const topN = 6;
       const topThemes = sortedThemes.slice(0, topN);
       const otherThemes = sortedThemes.slice(topN);
@@ -253,19 +270,6 @@ export default function AdminDashboard() {
             </div>
             {/* 감정/테마별 분포 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-white rounded-xl shadow p-6">
-                <h2 className="text-lg font-semibold mb-4">감정 분포</h2>
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie data={emotionPie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
-                      {emotionPie.map((entry, idx) => (
-                        <Cell key={`cell-emotion-${idx}`} fill={COLORS[idx % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
               <div className="bg-white rounded-xl shadow p-6">
                 <h2 className="text-lg font-semibold mb-4">테마 분포</h2>
                 <ResponsiveContainer width="100%" height={220}>

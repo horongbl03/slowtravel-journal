@@ -25,6 +25,19 @@ interface JourneyData {
   };
 }
 
+interface GeminiErrorResponse {
+  error?: {
+    message?: string;
+  };
+}
+
+interface AxiosErrorResponse {
+  response?: {
+    data?: GeminiErrorResponse;
+  };
+  message?: string;
+}
+
 export async function generateEmotionReport(data: JourneyData) {
   try {
     // Gemini API Key (운영/배포 환경에서는 반드시 환경변수로 관리)
@@ -87,14 +100,15 @@ export async function generateEmotionReport(data: JourneyData) {
     const content = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!content) throw new Error('Gemini 응답이 비어있습니다.');
     return JSON.parse(content);
-  } catch (error: any) {
-    if (error.response) {
-      console.error('Gemini API error response:', error.response.data);
-      throw new Error(error.response.data?.error?.message || 'Gemini API 호출 실패');
+  } catch (error: unknown) {
+    const axiosError = error as AxiosErrorResponse;
+    if (axiosError.response) {
+      console.error('Gemini API error response:', axiosError.response.data);
+      throw new Error(axiosError.response.data?.error?.message || 'Gemini API 호출 실패');
     }
-    if (error.message) {
-      console.error('Gemini API error message:', error.message);
-      throw new Error(error.message);
+    if (axiosError.message) {
+      console.error('Gemini API error message:', axiosError.message);
+      throw new Error(axiosError.message);
     }
     console.error('Error generating emotion report:', error);
     throw new Error('Gemini 감정 분석 리포트 생성에 실패했습니다.');

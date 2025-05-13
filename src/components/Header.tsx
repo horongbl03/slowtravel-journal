@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { Home } from 'lucide-react';
 
 interface WeatherData {

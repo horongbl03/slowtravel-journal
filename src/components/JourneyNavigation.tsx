@@ -4,11 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Check } from 'lucide-react';
 
-interface JourneyNavigationProps {
-  currentSessionId?: string;
-}
-
-const JourneyNavigation = ({ currentSessionId }: JourneyNavigationProps) => {
+const JourneyNavigation = () => {
   const pathname = usePathname();
 
   const steps = [

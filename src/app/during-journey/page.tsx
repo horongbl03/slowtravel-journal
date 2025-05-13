@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Home, Check } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { ArrowLeft, Check } from 'lucide-react';
 import SimpleNavigation from '@/components/SimpleNavigation';
 
 const DuringJourneyPage = () => {

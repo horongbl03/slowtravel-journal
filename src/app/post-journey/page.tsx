@@ -3,11 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Home, Check } from 'lucide-react';
+import { ArrowLeft, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import SimpleNavigation from '@/components/SimpleNavigation';
-import { generateEmotionReport } from '@/lib/openai';
 
 interface Resolution {
   id: string;

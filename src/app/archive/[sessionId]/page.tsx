@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Home, ArrowLeft, Trash2, Pencil } from 'lucide-react';
+import { ArrowLeft, Trash2, Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -75,40 +75,34 @@ const SessionDetailPage = () => {
         const sessionId = params.sessionId;
 
         // Fetch journey session
-        const { data: journeySession, error: sessionError } = await supabase
+        const { data: journeySession } = await supabase
           .from('journey_sessions')
           .select('*')
           .eq('id', sessionId)
           .single();
 
-        if (sessionError) throw sessionError;
+        if (!journeySession) throw new Error('Session not found');
 
         // Fetch pre journey records
-        const { data: preJourney, error: preError } = await supabase
+        const { data: preJourney } = await supabase
           .from('pre_journey_records')
           .select('*')
           .eq('session_id', sessionId)
           .single();
 
-        if (preError && preError.code !== 'PGRST116') throw preError;
-
         // Fetch during journey records
-        const { data: duringJourney, error: duringError } = await supabase
+        const { data: duringJourney } = await supabase
           .from('during_journey_records')
           .select('*')
           .eq('session_id', sessionId)
           .single();
 
-        if (duringError && duringError.code !== 'PGRST116') throw duringError;
-
         // Fetch post journey records
-        const { data: postJourney, error: postError } = await supabase
+        const { data: postJourney } = await supabase
           .from('post_journey_records')
           .select('*')
           .eq('session_id', sessionId)
           .single();
-
-        if (postError && postError.code !== 'PGRST116') throw postError;
 
         console.log('Raw data:', { preJourney, duringJourney, postJourney });
 
@@ -254,7 +248,6 @@ const SessionDetailPage = () => {
     try {
       // preJourney
       if (editData.preJourney) {
-        // pre_journey_records 존재 여부 확인
         const { data: existing } = await supabase
           .from('pre_journey_records')
           .select('id')
@@ -280,12 +273,12 @@ const SessionDetailPage = () => {
       }
       // duringJourney
       if (editData.duringJourney) {
-        const { data: existing } = await supabase
+        const { data: existingDuringJourney } = await supabase
           .from('during_journey_records')
           .select('id')
           .eq('session_id', editData.id)
           .single();
-        if (existing) {
+        if (existingDuringJourney) {
           await supabase.from('during_journey_records').update({
             focus_object: editData.duringJourney.focusObject,
             focus_reason: editData.duringJourney.focusReason,
@@ -308,12 +301,12 @@ const SessionDetailPage = () => {
       }
       // postJourney
       if (editData.postJourney) {
-        const { data: existing } = await supabase
+        const { data: existingPostJourney } = await supabase
           .from('post_journey_records')
           .select('id')
           .eq('session_id', editData.id)
           .single();
-        if (existing) {
+        if (existingPostJourney) {
           await supabase.from('post_journey_records').update({
             state_comparison: `출발 전: ${editData.postJourney.beforeState}\n여행 중: ${editData.postJourney.duringState}\n돌아온 지금: ${editData.postJourney.afterState}`,
             longest_place: editData.postJourney.longestPlace,
@@ -333,7 +326,7 @@ const SessionDetailPage = () => {
       setEditMode(false);
       setSessionData(editData);
       alert('수정이 저장되었습니다.');
-    } catch (error) {
+    } catch {
       alert('저장 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);

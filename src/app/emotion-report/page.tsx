@@ -1,11 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
 import SimpleNavigation from '@/components/SimpleNavigation';
-import { EmotionReport, generateEmotionReport, saveEmotionReportToDB } from '@/lib/emotion-report';
 
 export default function DeprecatedEmotionReportPage() {
   return (

@@ -12,6 +12,26 @@ interface EmotionReport {
   ai_feedback: string;
 }
 
+interface PreJourneyRecord {
+  physical_condition: string;
+  current_mood: string;
+  mood_details: string;
+  desires: string;
+}
+
+interface DuringJourneyRecord {
+  focus_object: string;
+  focus_reason: string;
+  emotions: string | string[];
+}
+
+interface PostJourneyRecord {
+  state_comparison: string;
+  longest_place: string;
+  longest_emotion: string;
+  journey_message: string;
+}
+
 export default function EmotionReportPage() {
   const { sessionId } = useParams();
   const router = useRouter();
@@ -53,15 +73,17 @@ export default function EmotionReportPage() {
         if (sessionError || !session) throw new Error('여행 기록을 불러올 수 없습니다.');
 
         // 2. 프롬프트 데이터 구조화
-        let pre: any = session.pre_journey_records;
-        let during: any = session.during_journey_records;
-        let post: any = session.post_journey_records;
-        if (Array.isArray(pre)) pre = pre[0];
-        if (Array.isArray(during)) during = during[0];
-        if (Array.isArray(post)) post = post[0];
-        if (!pre || Array.isArray(pre)) throw new Error('여행 전 기록이 완성되지 않았습니다.');
-        if (!during || Array.isArray(during)) throw new Error('여행 중 기록이 완성되지 않았습니다.');
-        if (!post || Array.isArray(post)) throw new Error('여행 후 기록이 완성되지 않았습니다.');
+        const preJourneyRecords = session.pre_journey_records as PreJourneyRecord[];
+        const duringJourneyRecords = session.during_journey_records as DuringJourneyRecord[];
+        const postJourneyRecords = session.post_journey_records as PostJourneyRecord[];
+
+        const pre = preJourneyRecords[0];
+        const during = duringJourneyRecords[0];
+        const post = postJourneyRecords[0];
+
+        if (!pre) throw new Error('여행 전 기록이 완성되지 않았습니다.');
+        if (!during) throw new Error('여행 중 기록이 완성되지 않았습니다.');
+        if (!post) throw new Error('여행 후 기록이 완성되지 않았습니다.');
 
         const prompt = `
 당신은 여행자의 감정을 분석하는 전문가입니다. 다음 여행 기록을 바탕으로 감정 분석 리포트를 작성해주세요.
@@ -120,8 +142,8 @@ export default function EmotionReportPage() {
 
         // 4. 결과 화면에 출력
         setReport(reportJson);
-      } catch (err: any) {
-        setError(err.message || '감정 분석 중 오류가 발생했습니다.');
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : '감정 분석 중 오류가 발생했습니다.');
       } finally {
         setLoading(false);
       }
