@@ -47,14 +47,21 @@ const SimpleNavigation = () => {
             <span className="text-xs text-gray-400">{error}</span>
           ) : weather ? (
             <span className="flex items-center gap-1 text-xs text-gray-600">
-              <Image
-                src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
-                alt={weather.description}
-                width={32}
-                height={32}
-                className="w-6 h-6"
-                style={{ marginRight: 2 }}
-              />
+              {weather.icon ? (
+                <Image
+                  src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
+                  alt={weather.description}
+                  width={32}
+                  height={32}
+                  className="w-6 h-6"
+                  style={{ marginRight: 2 }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/fallback-weather.png';
+                  }}
+                />
+              ) : (
+                <span className="w-6 h-6 mr-2 inline-block bg-gray-200 rounded" />
+              )}
               {Math.round(weather.temp)}°C · {weather.description}
             </span>
           ) : null}

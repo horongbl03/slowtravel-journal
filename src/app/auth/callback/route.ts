@@ -11,6 +11,9 @@ export async function GET(request: Request) {
     await supabase.auth.exchangeCodeForSession(code);
   }
 
-  // URL to redirect to after sign in process completes
-  return NextResponse.redirect(requestUrl.origin);
+  // URL에서 토큰 관련 파라미터 제거
+  const cleanUrl = new URL(requestUrl.origin);
+  
+  // 홈페이지로 리다이렉트
+  return NextResponse.redirect(cleanUrl.toString());
 } 

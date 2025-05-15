@@ -60,7 +60,7 @@ export default function LandingPage() {
 
             <div className="animate-fade-in">
               <p className="text-lg leading-relaxed">
-                내 마음의 속도로 걷는 감정 산책
+                삶의 템포를 회복하는 예술 여행
               </p>
             </div>
 

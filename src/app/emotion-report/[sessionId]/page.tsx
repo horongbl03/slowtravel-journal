@@ -44,46 +44,32 @@ export default function EmotionReportPage() {
       setLoading(true);
       setError(null);
       try {
-        // 1. Supabase에서 여행 기록 데이터 불러오기
-        const { data: session, error: sessionError } = await supabase
-          .from('journey_sessions')
-          .select(`
-            id,
-            pre_journey_records (
-              physical_condition,
-              current_mood,
-              mood_details,
-              desires
-            ),
-            during_journey_records (
-              focus_object,
-              focus_reason,
-              emotions
-            ),
-            post_journey_records (
-              state_comparison,
-              longest_place,
-              longest_emotion,
-              journey_message
-            )
-          `)
-          .eq('id', sessionId)
+        // 1. 여행 전/중/후 기록을 각각 별도 쿼리로 직접 불러오기
+        const { data: preJourney, error: preError } = await supabase
+          .from('pre_journey_records')
+          .select('*')
+          .eq('session_id', sessionId)
           .single();
+        if (preError || !preJourney) throw new Error('여행 전 기록이 완성되지 않았습니다.');
 
-        if (sessionError || !session) throw new Error('여행 기록을 불러올 수 없습니다.');
+        const { data: duringJourney, error: duringError } = await supabase
+          .from('during_journey_records')
+          .select('*')
+          .eq('session_id', sessionId)
+          .single();
+        if (duringError || !duringJourney) throw new Error('여행 중 기록이 완성되지 않았습니다.');
+
+        const { data: postJourney, error: postError } = await supabase
+          .from('post_journey_records')
+          .select('*')
+          .eq('session_id', sessionId)
+          .single();
+        if (postError || !postJourney) throw new Error('여행 후 기록이 완성되지 않았습니다.');
 
         // 2. 프롬프트 데이터 구조화
-        const preJourneyRecords = session.pre_journey_records as PreJourneyRecord[];
-        const duringJourneyRecords = session.during_journey_records as DuringJourneyRecord[];
-        const postJourneyRecords = session.post_journey_records as PostJourneyRecord[];
-
-        const pre = preJourneyRecords[0];
-        const during = duringJourneyRecords[0];
-        const post = postJourneyRecords[0];
-
-        if (!pre) throw new Error('여행 전 기록이 완성되지 않았습니다.');
-        if (!during) throw new Error('여행 중 기록이 완성되지 않았습니다.');
-        if (!post) throw new Error('여행 후 기록이 완성되지 않았습니다.');
+        const pre = preJourney;
+        const during = duringJourney;
+        const post = postJourney;
 
         const prompt = `
 당신은 여행자의 감정을 분석하는 전문가입니다. 다음 여행 기록을 바탕으로 감정 분석 리포트를 작성해주세요.
