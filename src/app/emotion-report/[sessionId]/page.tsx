@@ -12,26 +12,6 @@ interface EmotionReport {
   ai_feedback: string;
 }
 
-interface PreJourneyRecord {
-  physical_condition: string;
-  current_mood: string;
-  mood_details: string;
-  desires: string;
-}
-
-interface DuringJourneyRecord {
-  focus_object: string;
-  focus_reason: string;
-  emotions: string | string[];
-}
-
-interface PostJourneyRecord {
-  state_comparison: string;
-  longest_place: string;
-  longest_emotion: string;
-  journey_message: string;
-}
-
 export default function EmotionReportPage() {
   const { sessionId } = useParams();
   const router = useRouter();
